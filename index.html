@@ -2,22 +2,71 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>My Custom Website</title>
+    <title>JSON Editor</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             background-color: #222;
-            color: white;
-            text-align: center;
-            margin-top: 50px;
+            color: #fff;
+            padding: 20px;
         }
-        h1 {
-            color: #00ff88;
+        textarea {
+            width: 100%;
+            height: 300px;
+            font-family: monospace;
+            background-color: #111;
+            color: #0f0;
+            padding: 10px;
+            border: none;
+            resize: vertical;
+        }
+        button {
+            margin-top: 10px;
+            padding: 10px;
+            font-size: 16px;
+            background-color: #0f0;
+            color: #000;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0c0;
         }
     </style>
 </head>
 <body>
-    <h1>Hello, GitHub Pages!</h1>
-    <p>This is my custom index.html.</p>
+    <h1>JSON Viewer & Editor</h1>
+    <textarea id="jsonText"></textarea><br>
+    <button onclick="downloadJSON()">Download Edited JSON</button>
+
+    <script>
+        const jsonUrl = 'data.json'; // file in same repo
+
+        // Fetch JSON
+        fetch(jsonUrl)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('jsonText').value = JSON.stringify(data, null, 4);
+            })
+            .catch(error => console.error('Error fetching JSON:', error));
+
+        // Download edited JSON
+        function downloadJSON() {
+            const text = document.getElementById('jsonText').value;
+            try {
+                JSON.parse(text); // validate JSON
+            } catch (e) {
+                alert('Invalid JSON format!');
+                return;
+            }
+            const blob = new Blob([text], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'data.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+    </script>
 </body>
 </html>
