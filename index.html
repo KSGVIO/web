@@ -1,64 +1,44 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Under Construction</title>
-    <style>
-        body {
-            background: #181a1b;
-            color: #f1f1f1;
-            font-family: Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-        }
-        .container {
-            text-align: center;
-        }
-        .icon {
-            font-size: 64px;
-            margin-bottom: 20px;
-            color: #ffb300;
-        }
-        h1 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-            color: #fff;
-        }
-        p {
-            font-size: 1.2rem;
-            color: #b0b0b0;
-        }
-        .status-btn {
-            margin-top: 25px;
-            padding: 12px 28px;
-            font-size: 1rem;
-            background: #ff9800;
-            color: #181a1b;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            text-decoration: none;
-            transition: background 0.2s, color 0.2s;
-            display: inline-block;
-            font-weight: bold;
-        }
-        .status-btn:hover {
-            background: #e68900;
-            color: #fff;
-        }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="/style/index.css" />
+  <title>App Hub • GitHub‑style</title>
+  <meta name="color-scheme" content="light dark">
 </head>
 <body>
-    <div class="container">
-        <div class="icon">🚧</div>
-        <h1>Under Construction</h1>
-        <p>This web page is currently under build.<br>Please check back soon!</p>
-        <a class="status-btn" href="https://github.com/KSGVIO/web/actions" target="_blank" rel="noopener">Check Build Status (latest action)</a>
-    </div>
+  <h1>App Hub</h1>
+  <div class="repo-list" id="repo-list"></div>
+
+  <footer>
+    Using /style/index.css
+  </footer>
+
+  <script>
+    const APPS = [
+      { name: "R-S", href: "/pages/r-stuff.html", description: "", pinned: true },
+      { name: "Actions", href: "https://github.com/KSGVIO/web/actions", description: "Web repo streaming actions.", pinned: true },
+      { name: "Home Dashboard", href: "file:///*", description: "Metrics and smart home widgets." },
+      { name: "Docs Viewer", href: "/docs/", description: "Browse internal docs and notes." },
+      { name: "Dev Tools", href: "/dev/", description: "Local playground for APIs." }
+    ];
+
+    function repoTemplate(app) {
+      return `
+        <div class="repo">
+          <div class="repo-info">
+            <a href="${app.href}">${app.name}</a>
+            <p>${app.description}</p>
+          </div>
+          <div class="repo-actions">
+            <a class="btn" href="${app.href}">Open</a>
+            <a class="btn" href="${app.href}" target="_blank" rel="noopener">New Tab</a>
+          </div>
+        </div>`;
+    }
+
+    document.getElementById('repo-list').innerHTML = APPS.map(repoTemplate).join('');
+  </script>
 </body>
 </html>
