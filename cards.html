@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Memory Match — Card Game</title>
+  <style>
+    :root{
+      --bg:#0b1020;
+      --panel:#121a2b;
+      --accent:#7c9cff;
+      --accent-2:#00d2ff;
+      --text:#e6ecff;
+      --muted:#9fb0d0;
+      --good:#32d583;
+      --bad:#ef4444;
+      --card:#0f1625;
+      --card-edge:#1e2a44;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius:18px;
+    }
+    html,body{
+      height:100%;
+      background: radial-gradient(1200px 600px at 20% -10%, #1a2440, transparent),
+                  radial-gradient(1000px 600px at 120% 10%, #0e6cff20, transparent),
+                  linear-gradient(120deg,#081226,#0b1020 40%, #0b1020);
+      color:var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      margin:0;
+    }
+    .wrap{
+      max-width:1100px; margin:0 auto; padding:32px 20px 40px; min-height:100%;
+      display:flex; flex-direction:column; gap:22px;
+    }
+    header{
+      display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:16px;
+    }
+    .title{
+      display:flex; align-items:center; gap:12px;
+    }
+    .logo{ width:42px; height:42px; border-radius:12px; display:grid; place-items:center; font-size:24px;
+      background: linear-gradient(135deg,var(--accent),var(--accent-2)); box-shadow: var(--shadow);
+    }
+    h1{ font-size:clamp(20px,3vw,28px); margin:0; letter-spacing:.4px; }
+    .sub{ color:var(--muted); font-size:13px; }
+
+    .controls{
+      display:flex; flex-wrap:wrap; gap:12px; align-items:center;
+      background:color-mix(in oklab, var(--panel) 85%, #000 15%);
+      border:1px solid #1a2642; padding:12px; border-radius:16px;
+      box-shadow: var(--shadow);
+    }
+    .group{ display:flex; gap:8px; align-items:center; }
+    label{ color:var(--muted); font-size:13px; }
+    select, button{
+      background: linear-gradient(180deg, #151f36, #0d1528);
+      color:var(--text); border:1px solid #243356; border-radius:12px;
+      padding:10px 12px; font-size:14px; cursor:pointer; outline:none;
+      box-shadow: inset 0 1px 0 #2a3b64, 0 6px 16px rgb(0 0 0 / 30%);
+    }
+    button.primary{ background: linear-gradient(180deg, #2a68ff, #2155d6); border-color:#2b5fe0; }
+    button.ghost{ background: transparent; border-color:#243356; }
+    button:active{ transform: translateY(1px); }
+
+    .stats{ display:flex; gap:14px; flex-wrap:wrap; }
+    .chip{ background: #0d1528; border:1px solid #223255; padding:8px 10px; border-radius:999px; font-size:13px; color:var(--muted); }
+    .chip b{ color:var(--text); font-weight:600; }
+
+    /* Grid */
+    .board-wrap{ position:relative; }
+    .board{
+      display:grid; gap:12px; width:100%;
+      grid-template-columns: repeat(4, minmax(0,1fr));
+      background: linear-gradient(180deg,#0a1426,#0a1220);
+      padding:16px; border-radius:20px; border:1px solid #1a2642; box-shadow: var(--shadow);
+    }
+    @media (min-width: 760px){
+      .board{ gap:16px; padding:20px; }
+    }
+
+    /* Card */
+    .card{
+      position:relative; aspect-ratio: 2 / 3; border-radius:16px; perspective: 1200px; user-select:none;
+    }
+    .card-inner{
+      position:absolute; inset:0; transform-style:preserve-3d; transition: transform 420ms cubic-bezier(.2,.85,.25,1);
+    }
+    .card.flipped .card-inner, .card.matched .card-inner{ transform: rotateY(180deg); }
+    .face{
+      position:absolute; inset:0; display:grid; place-items:center; border-radius:16px; backface-visibility:hidden;
+    }
+    .front{
+      background:
+        radial-gradient(120px 60px at 20% 10%, #20325c, transparent),
+        radial-gradient(100px 60px at 80% 90%, #1a2a4d, transparent),
+        linear-gradient(180deg,#101a31,#0a1222);
+      border:1px solid var(--card-edge);
+    }
+    .back{
+      transform: rotateY(180deg);
+      background: linear-gradient(135deg,#0e1628,#0d1524);
+      border:1px solid var(--card-edge);
+      box-shadow: inset 0 0 0 2px #1c2846, inset 0 0 0 6px #0f1830;
+      font-size: clamp(32px, 5.5vw, 54px);
+    }
+    .badge{
+      position:absolute; top:8px; right:8px; font-size:12px; color:#9db4ff; opacity:.8;
+    }
+
+    /* Win modal */
+    dialog.win{
+      border:none; border-radius:22px; padding:0; overflow:hidden; box-shadow: 0 30px 80px rgba(0,0,0,.55);
+      background: linear-gradient(180deg,#0f1b33,#0b1224);
+      color:var(--text); max-width:min(520px, 92vw);
+    }
+    .win header{ padding:18px 20px; background: linear-gradient(180deg,#1a2a4d,#132145); border-bottom:1px solid #243356; }
+    .win main{ padding:22px; display:grid; gap:14px; }
+    .win .actions{ display:flex; justify-content:flex-end; gap:10px; padding:0 22px 22px; }
+
+    /* Confetti (simple) */
+    .confetti{ position:fixed; inset:0; pointer-events:none; overflow:hidden; }
+    .confetti i{ position:absolute; width:8px; height:14px; background: linear-gradient(180deg, var(--accent), var(--accent-2)); opacity:.9; border-radius:2px; animation: fall 1400ms linear forwards; }
+    @keyframes fall{ to{ transform: translateY(110vh) rotate(540deg); opacity:.2; } }
+
+    /* Footer */
+    footer{ color:var(--muted); font-size:12px; display:flex; justify-content:space-between; opacity:.9; }
+    footer a{ color:#9db4ff; text-decoration:none; }
+
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="title">
+        <div class="logo" aria-hidden="true">🃏</div>
+        <div>
+          <h1>Memory Match</h1>
+          <div class="sub">Flip cards to find all pairs.</div>
+        </div>
+      </div>
+      <div class="controls" role="group" aria-label="Game controls">
+        <div class="group">
+          <label for="pairs">Pairs</label>
+          <select id="pairs" title="Choose number of pairs">
+            <option value="6">6 (Easy)</option>
+            <option value="8" selected>8 (Normal)</option>
+            <option value="10">10 (Hard)</option>
+            <option value="12">12 (Expert)</option>
+          </select>
+        </div>
+        <div class="group">
+          <label for="theme">Theme</label>
+          <select id="theme" title="Choose card theme">
+            <option value="fruits" selected>Fruits</option>
+            <option value="symbols">Symbols</option>
+            <option value="animals">Animals</option>
+            <option value="cards">Playing Cards</option>
+          </select>
+        </div>
+        <button id="new" class="primary">New Game</button>
+        <button id="peek" class="ghost" title="Peek all for 2s">Peek</button>
+      </div>
+    </header>
+
+    <section class="stats" aria-live="polite" aria-atomic="true">
+      <div class="chip">⏱ Time: <b id="time">00:00</b></div>
+      <div class="chip">🎯 Moves: <b id="moves">0</b></div>
+      <div class="chip">🏆 Best: <b id="best">—</b></div>
+    </section>
+
+    <div class="board-wrap">
+      <div id="board" class="board" aria-label="Game board"></div>
+    </div>
+
+    <footer>
+      <span>Single-file, no libraries.</span>
+      <span>Tip: Use <b>Peek</b> at the start for a quick glance.</span>
+    </footer>
+  </div>
+
+  <dialog class="win" id="win">
+    <header>
+      <h3 style="margin:0">🎉 You cleared the board!</h3>
+    </header>
+    <main>
+      <p id="summary" style="margin:0"></p>
+      <div class="stats-line" style="display:flex; gap:10px; flex-wrap:wrap;">
+        <div class="chip">⏱ Time: <b id="w-time">00:00</b></div>
+        <div class="chip">🎯 Moves: <b id="w-moves">0</b></div>
+        <div class="chip">🏆 Best: <b id="w-best">—</b></div>
+      </div>
+    </main>
+    <div class="actions">
+      <button id="again" class="primary">Play Again</button>
+      <button id="close">Close</button>
+    </div>
+  </dialog>
+
+  <div class="confetti" id="confetti" aria-hidden="true"></div>
+
+  <script>
+  ;(() => {
+    const boardEl = document.getElementById('board');
+    const timeEl  = document.getElementById('time');
+    const movesEl = document.getElementById('moves');
+    const bestEl  = document.getElementById('best');
+    const winDlg  = document.getElementById('win');
+    const wTimeEl = document.getElementById('w-time');
+    const wMovesEl= document.getElementById('w-moves');
+    const wBestEl = document.getElementById('w-best');
+    const summary = document.getElementById('summary');
+
+    const pairsSel = document.getElementById('pairs');
+    const themeSel = document.getElementById('theme');
+    const newBtn   = document.getElementById('new');
+    const peekBtn  = document.getElementById('peek');
+    const againBtn = document.getElementById('again');
+    const closeBtn = document.getElementById('close');
+    const confetti = document.getElementById('confetti');
+
+    const THEMES = {
+      fruits: ['🍎','🍌','🍇','🍉','🍓','🍒','🍍','🥝','🍑','🥥','🍋','🍊','🍐','🫐','🥭','🍈'],
+      symbols:['⭐','❤️','⚡','🔥','❄️','🌈','☂️','🎲','🎯','🎵','🎮','🎁','🎨','🧩','🔔','🪄'],
+      animals:['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐷','🐸','🐵','🐔','🐥'],
+      cards:  ['🂡','🂢','🂣','🂤','🂥','🂦','🂧','🂨','🂩','🂪','🂫','🂭','🂮','🂱','🂲','🂳']
+    };
+
+    let state = {
+      deck: [],
+      first: null,
+      lock: false,
+      moves: 0,
+      matched: 0,
+      startTs: 0,
+      timerId: null,
+      started: false,
+      pairCount: 8,
+      theme: 'fruits',
+    };
+
+    function fmtTime(ms){
+      const s = Math.floor(ms/1000);
+      const m = Math.floor(s/60).toString().padStart(2,'0');
+      const r = (s%60).toString().padStart(2,'0');
+      return `${m}:${r}`;
+    }
+
+    function shuffle(arr){
+      for(let i=arr.length-1;i>0;i--){
+        const j = (Math.random()* (i+1))|0; [arr[i],arr[j]]=[arr[j],arr[i]];
+      }
+      return arr;
+    }
+
+    function bestKey(){ return `memory-best-${state.pairCount}-${state.theme}`; }
+    function setBest(ms, moves){ localStorage.setItem(bestKey(), JSON.stringify({ms, moves})); }
+    function getBest(){ try{ return JSON.parse(localStorage.getItem(bestKey())) } catch{ return null } }
+
+    function resetTimer(){
+      clearInterval(state.timerId);
+      state.timerId = null; state.startTs = 0; state.started = false;
+      timeEl.textContent = '00:00';
+    }
+
+    function startTimer(){
+      if(state.started) return;
+      state.started = true; state.startTs = performance.now();
+      state.timerId = setInterval(() => {
+        timeEl.textContent = fmtTime(performance.now() - state.startTs);
+      }, 200);
+    }
+
+    function makeCardHTML(symbol, idx){
+      return `<button class="card" data-symbol="${symbol}" data-idx="${idx}" aria-label="card" aria-pressed="false">
+        <div class="card-inner">
+          <div class="face front" aria-hidden="true"></div>
+          <div class="face back" aria-hidden="true">${symbol}<span class="badge">${idx+1}</span></div>
+        </div>
+      </button>`;
+    }
+
+    function buildBoard(){
+      // Adjust columns depending on pair count
+      const columns = state.pairCount <= 8 ? 4 : 6;
+      boardEl.style.gridTemplateColumns = `repeat(${columns}, minmax(0,1fr))`;
+      const symbols = THEMES[state.theme].slice(0, state.pairCount);
+      const deck = shuffle([...symbols, ...symbols]).map((s,i)=>({ s, i, matched:false }));
+      state.deck = deck; state.first = null; state.lock=false; state.moves=0; state.matched=0;
+      movesEl.textContent = '0';
+
+      boardEl.innerHTML = deck.map((c, idx)=> makeCardHTML(c.s, idx)).join('');
+      // attach listeners
+      boardEl.querySelectorAll('.card').forEach(card => card.addEventListener('click', onFlip));
+
+      // Best display
+      const best = getBest();
+      bestEl.textContent = best ? `${fmtTime(best.ms)} / ${best.moves}m` : '—';
+
+      // Small entrance animation
+      boardEl.animate([{opacity:0, transform:'scale(.98)'}, {opacity:1, transform:'scale(1)'}], {duration:300, easing:'ease-out'});
+
+      resetTimer();
+    }
+
+    function onFlip(e){
+      const card = e.currentTarget;
+      if(state.lock || card.classList.contains('flipped') || card.classList.contains('matched')) return;
+      startTimer();
+      card.classList.add('flipped');
+      card.setAttribute('aria-pressed','true');
+
+      if(!state.first){
+        state.first = card; return;
+      }
+      // Second card
+      state.lock = true; state.moves++; movesEl.textContent = String(state.moves);
+      const a = state.first.dataset.symbol; const b = card.dataset.symbol;
+      if(a === b){
+        setTimeout(()=>{
+          state.first.classList.add('matched');
+          card.classList.add('matched');
+          state.matched++;
+          state.first = null; state.lock = false;
+          // Win?
+          if(state.matched === state.pairCount){ onWin(); }
+        }, 240);
+      } else {
+        setTimeout(()=>{
+          state.first.classList.remove('flipped');
+          card.classList.remove('flipped');
+          state.first.setAttribute('aria-pressed','false');
+          card.setAttribute('aria-pressed','false');
+          state.first = null; state.lock = false;
+        }, 600);
+      }
+    }
+
+    function onWin(){
+      clearInterval(state.timerId);
+      const elapsed = performance.now() - state.startTs;
+
+      const best = getBest();
+      let newBest = false;
+      if(!best || elapsed < best.ms || (elapsed === best.ms && state.moves < best.moves)){
+        setBest(elapsed, state.moves); newBest = true;
+      }
+
+      // Confetti
+      splashConfetti();
+
+      wTimeEl.textContent = fmtTime(elapsed);
+      wMovesEl.textContent = String(state.moves);
+      const bestNow = getBest();
+      wBestEl.textContent = bestNow ? `${fmtTime(bestNow.ms)} / ${bestNow.moves}m` : '—';
+      summary.textContent = `Cleared ${state.pairCount} pairs (${state.theme}) in ${fmtTime(elapsed)} with ${state.moves} moves${newBest ? ' — New Best! 🎉' : ''}.`;
+      bestEl.textContent = wBestEl.textContent;
+
+      winDlg.showModal();
+    }
+
+    function splashConfetti(){
+      confetti.innerHTML = '';
+      const n = 80 + Math.floor(Math.random()*40);
+      const w = window.innerWidth;
+      for(let i=0;i<n;i++){
+        const el = document.createElement('i');
+        el.style.left = (Math.random()*w) + 'px';
+        el.style.top = (-20 - Math.random()*80) + 'px';
+        el.style.transform = `translateY(0) rotate(${Math.random()*180}deg)`;
+        el.style.animationDelay = (Math.random()*0.5) + 's';
+        el.style.opacity = 0.8 + Math.random()*0.2;
+        confetti.appendChild(el);
+        setTimeout(()=> el.remove(), 2200);
+      }
+    }
+
+    function peekAll(){
+      const cards = [...boardEl.querySelectorAll('.card')];
+      const toFlip = cards.filter(c=>!c.classList.contains('matched'));
+      if(!toFlip.length) return;
+      toFlip.forEach(c=>c.classList.add('flipped'));
+      setTimeout(()=> toFlip.forEach(c=>c.classList.remove('flipped')), 2000);
+    }
+
+    // Events
+    newBtn.addEventListener('click', () => {
+      state.pairCount = parseInt(pairsSel.value,10);
+      state.theme = themeSel.value;
+      buildBoard();
+    });
+    peekBtn.addEventListener('click', peekAll);
+    againBtn.addEventListener('click', () => { winDlg.close(); buildBoard(); });
+    closeBtn.addEventListener('click', () => winDlg.close());
+
+    // Keyboard: allow Enter/Space to flip focused card
+    boardEl.addEventListener('keydown', (e) => {
+      if(e.key === ' ' || e.key === 'Enter'){
+        const tgt = e.target.closest('.card');
+        if(tgt) { e.preventDefault(); tgt.click(); }
+      }
+    });
+
+    // First render
+    buildBoard();
+  })();
+  </script>
+</body>
+</html>
